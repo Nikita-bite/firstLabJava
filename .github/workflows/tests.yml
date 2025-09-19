@@ -34,11 +34,3 @@ jobs:
           path: |
             build/reports/tests/
             build/test-results/
-
-      - name: Publish Test Results
-        uses: dorny/test-reporter@v1
-        if: always()
-        with:
-          name: JUnit Tests
-          path: build/test-results/**/*.xml
-          reporter: java-junit
