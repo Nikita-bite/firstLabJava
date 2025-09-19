@@ -27,6 +27,26 @@ jobs:
       - name: Run tests with Gradle
         run: ./gradlew test
 
+      - name: Generate Test Summary
+        if: always()
+        run: |
+          echo "Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+  
+          if grep -q "BUILD SUCCESSFUL" <<< "$(./gradlew test --quiet)"; then
+          echo " All tests passed!" >> $GITHUB_STEP_SUMMARY
+          echo " Everything is working perfectly!" >> $GITHUB_STEP_SUMMARY
+          else
+          echo " Some tests failed!" >> $GITHUB_STEP_SUMMARY
+          echo "Check the test logs for details." >> $GITHUB_STEP_SUMMARY
+          fi
+  
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo " Test Statistics:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          ./gradlew test --quiet | grep -E "(tests|PASSED|FAILED|SKIPPED)" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
       - name: Upload test reports
         uses: actions/upload-artifact@v4
         with:
