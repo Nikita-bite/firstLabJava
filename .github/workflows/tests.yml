@@ -1,56 +1,46 @@
-name: Java CI with Gradle
+name: Gradle Tests
 
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+on: [push, pull_request]
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - run: chmod +x gradlew
 
-      - name: Run tests with Gradle
-        run: ./gradlew test
+      - name: Run tests and capture output
+        id: test_run
+        run: |
+          TEST_OUTPUT=$(./gradlew test --no-daemon --quiet 2>&1; echo "EXIT_CODE=$?")
+          echo "TEST_OUTPUT<<EOF" >> $GITHUB_ENV
+          echo "$TEST_OUTPUT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Generate Test Summary
         if: always()
         run: |
           echo "Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-  
-          if grep -q "BUILD SUCCESSFUL" <<< "$(./gradlew test --quiet)"; then
-          echo " All tests passed!" >> $GITHUB_STEP_SUMMARY
-          echo " Everything is working perfectly!" >> $GITHUB_STEP_SUMMARY
+          
+          # Используем сохраненный вывод
+          if echo "$TEST_OUTPUT" | grep -q "BUILD SUCCESSFUL"; then
+            echo "All tests passed!" >> $GITHUB_STEP_SUMMARY
+            echo "Everything is working perfectly!" >> $GITHUB_STEP_SUMMARY
           else
-          echo " Some tests failed!" >> $GITHUB_STEP_SUMMARY
-          echo "Check the test logs for details." >> $GITHUB_STEP_SUMMARY
+            echo "Some tests failed!" >> $GITHUB_STEP_SUMMARY
+            echo "Check the test logs for details." >> $GITHUB_STEP_SUMMARY
           fi
-  
+          
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo " Test Statistics:" >> $GITHUB_STEP_SUMMARY
+          echo "Test Statistics:" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          ./gradlew test --quiet | grep -E "(tests|PASSED|FAILED|SKIPPED)" >> $GITHUB_STEP_SUMMARY
+          echo "$TEST_OUTPUT" | grep -E "(tests|PASSED|FAILED|SKIPPED|BUILD)" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-
-      - name: Upload test reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-reports
-          path: |
-            build/reports/tests/
-            build/test-results/
